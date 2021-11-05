@@ -5,7 +5,9 @@ import sys
 import traceback
 import os
 
-bot = commands.Bot(command_prefix='!')
+intents = discord.Intents.default()
+intents.members = True
+bot = commands.Bot(command_prefix='!', intents=intents)
 bot.remove_command("help")
 
 initial_extensions = ['src.cogs.search']

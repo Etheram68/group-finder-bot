@@ -46,8 +46,24 @@ class Search(commands.Cog):
 
 
 	@commands.Cog.listener()
+	async def on_reaction_remove(self, reaction, user):
+		guildID = reaction.message.guild.id
+		msgID = reaction.message.id
+		msg =  reaction.message
+		if reaction.emoji in self.__private_emojis_ut and self.db.check_if_mess_exist(guildID, msgID):
+			new_embed = None
+			for e in msg.embeds:
+				new_embed = e.to_dict()
+				break
+			for e in new_embed['fields']:
+				if e['value'] == user.name:
+					e['value'] = '-'
+					break
+			await msg.edit(embed=discord.Embed.from_dict(new_embed))
+
+
+	@commands.Cog.listener()
 	async def on_reaction_add(self, reaction, user):
-		print(f"{reaction.message.id}, {user.name}, {reaction.message.guild.id}")
 		guildID = reaction.message.guild.id
 		msgID = reaction.message.id
 		msg =  reaction.message
@@ -56,7 +72,6 @@ class Search(commands.Cog):
 				new_embed = None
 				for e in msg.embeds:
 					new_embed = e.to_dict()
-					print(e.to_dict())
 					break
 				if reaction.emoji == '🛡':
 					for e in new_embed['fields']:
@@ -75,7 +90,6 @@ class Search(commands.Cog):
 							break
 
 				await msg.edit(embed=discord.Embed.from_dict(new_embed))
-				print(f"{reaction}, {user}")
 
 
 	@commands.command(name="delete")
@@ -99,7 +113,7 @@ class Search(commands.Cog):
 		guildID = ctx.guild.id
 		authorID = ctx.author.id
 		def check(m):
-			return m.author.dm_channel == ctx.author.dm_channel
+			return m.author == ctx.author
 		messages = await ctx.channel.history(limit=1).flatten()
 		for each_message in messages:
 			await each_message.delete()
