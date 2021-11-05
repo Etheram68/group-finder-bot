@@ -48,7 +48,12 @@ class Search(commands.Cog):
 		messages = await ctx.channel.history(limit=1).flatten()
 		for each_message in messages:
 			await each_message.delete()
+		id_mess = self.db.get_id_mess(guildID, authorID)
+		channel_id = self.db.get_channel_id(guildID)
+		chanel = self.bot.get_channel(int(channel_id))
+		msg = await chanel.fetch_message(id_mess)
 		self.db.drop_groups_author(guildID, authorID)
+		await msg.delete()
 		await ctx.author.send("** Last find group is removed **")
 
 
@@ -93,7 +98,9 @@ class Search(commands.Cog):
 						else:
 							embed = await self.__create_view_embed(name_activity, level_activity, number_player, departure)
 							channel_id = self.db.get_channel_id(guildID)
-							self.db.set_groups_table(guildID, authorID, name_activity, level_activity, number_player, departure)
+							chanel = self.bot.get_channel(int(channel_id))
+							mess = await chanel.send(embed=embed)
+							self.db.set_groups_table(guildID, authorID, name_activity, level_activity, number_player, departure, mess.id)
 		else:
 			await ctx.author.send("** You find a group, please delete this and restart **")
 

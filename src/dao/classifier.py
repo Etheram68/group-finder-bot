@@ -13,7 +13,7 @@ class DaoFactory:
 
 	def __init_tables_expeditions(self):
 		self.cur.execute('''CREATE TABLE IF NOT EXISTS groups
-               (guildID str, authorID str, name text, level int, number_p int, departure text)''')
+               (guildID str, authorID str, name text, level int, number_p int, departure text, mesId int)''')
 		self.cur.execute('''CREATE TABLE IF NOT EXISTS guild
                (guildID str, ownerID str, channelID str, categoryID str)''')
 		self.con.commit()
@@ -27,10 +27,18 @@ class DaoFactory:
 			self.con.commit()
 
 
+	def get_id_mess(self, guildID:str, authorID:str):
+		self.cur.execute("SELECT mesId FROM groups WHERE guildID=? AND authorID=?", (guildID, authorID))
+		res = self.cur.fetchone()
+		if res:
+			return res[0]
+
+
 	def get_channel_id(self, guildID:str):
 		self.cur.execute("SELECT channelID FROM guild WHERE guildID=?", (guildID,))
 		res = self.cur.fetchone()
 		return res[0]
+
 
 	def get_groups_author(self, guildID:str, authorID:str):
 		self.cur.execute("SELECT * FROM groups WHERE guildID=? AND authorID=?", (guildID, authorID))
@@ -38,13 +46,12 @@ class DaoFactory:
 		return res
 
 
-	def set_groups_table(self, guildID:str, authorID:str, name:str, level:int, nb_player:int, departure:str):
+	def set_groups_table(self, guildID:str, authorID:str, name:str, level:int, nb_player:int, departure:str, messId:int):
 		self.cur.execute("SELECT * FROM groups WHERE guildID=? AND authorID=?", (guildID, authorID))
 		res = self.cur.fetchone()
 		if res is None:
-			print('Create')
-			self.cur.execute("INSERT INTO groups VALUES(?, ?, ?, ?, ?, ?)", \
-							(guildID, authorID, name, level, nb_player, departure))
+			self.cur.execute("INSERT INTO groups VALUES(?, ?, ?, ?, ?, ?, ?)", \
+							(guildID, authorID, name, level, nb_player, departure, messId))
 			self.con.commit()
 
 
@@ -52,11 +59,9 @@ class DaoFactory:
 		self.cur.execute("SELECT * FROM guild WHERE guildID=? AND ownerID=?", (guildID, ownerID))
 		res = self.cur.fetchone()
 		if res is None:
-			print('create')
 			self.cur.execute("INSERT INTO guild VALUES(?, ?, ?, ?)", \
 					(guildID, ownerID, channelID, categoryID))
 		else:
-			print('Update')
 			self.cur.execute('''UPDATE guild SET guildID=?, ownerID=?,
 								channelID=?, categoryID=?''', \
 					(guildID, ownerID, channelID, categoryID))
