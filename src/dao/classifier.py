@@ -27,6 +27,11 @@ class DaoFactory:
 			self.con.commit()
 
 
+	def get_channel_id(self, guildID:str):
+		self.cur.execute("SELECT channelID FROM guild WHERE guildID=?", (guildID,))
+		res = self.cur.fetchone()
+		return res[0]
+
 	def get_groups_author(self, guildID:str, authorID:str):
 		self.cur.execute("SELECT * FROM groups WHERE guildID=? AND authorID=?", (guildID, authorID))
 		res = self.cur.fetchone()

@@ -13,6 +13,18 @@ class Search(commands.Cog):
 		self.bot = bot
 
 
+	async def __create_view_embed(self, name, level, nb_player, departure):
+		embed = discord.Embed(title='Group Search', description=f"{name}", color=0xff0000)
+		embed.add_field(name="level", value=f"{level}", inline=True)
+		embed.add_field(name="Departure", value=f"{departure}", inline=True)
+		embed.add_field(name="Tank:", value="undefined", inline=False)
+		embed.add_field(name="Heal:", value="undefined", inline=False)
+		embed.add_field(name="Dps", value="undefined", inline=False)
+		embed.add_field(name="Dps", value="undefined", inline=False)
+		embed.add_field(name="Dps", value="undefined", inline=False)
+		return embed
+
+
 	@commands.command()
 	async def help(self, ctx):
 		embed = discord.Embed(title="Help", description="",color=0x7289da)
@@ -63,22 +75,24 @@ class Search(commands.Cog):
 					level_activity = await self.bot.wait_for('message',check=check, timeout=60.0)
 					level_activity = int(level_activity.content)
 				except asyncio.TimeoutError:
-					await ctx.channel.send('Took too long to answer!')
+					await ctx.author.send('Took too long to answer!')
 				else:
 					await ctx.author.send("** Enter number of players for this activity: (e.g  `5`) **")
 					try:
 						number_player = await self.bot.wait_for('message',check=check, timeout=60.0)
 						number_player = int(number_player.content)
 					except asyncio.TimeoutError:
-						await ctx.channel.send('Took too long to answer!')
+						await ctx.author.send('Took too long to answer!')
 					else:
 						await ctx.author.send("** Enter departure for this activity: (e.g  `18h30`) **")
 						try:
 							departure = await self.bot.wait_for('message',check=check, timeout=60.0)
 							departure = departure.content
 						except asyncio.TimeoutError:
-							await ctx.channel.send('Took too long to answer!')
+							await ctx.author.send('Took too long to answer!')
 						else:
+							embed = await self.__create_view_embed(name_activity, level_activity, number_player, departure)
+							channel_id = self.db.get_channel_id(guildID)
 							self.db.set_groups_table(guildID, authorID, name_activity, level_activity, number_player, departure)
 		else:
 			await ctx.author.send("** You find a group, please delete this and restart **")
