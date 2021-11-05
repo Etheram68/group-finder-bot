@@ -3,7 +3,6 @@ from discord import channel
 from discord import client
 from discord.ext import commands
 import asyncio
-import time
 from src.dao.classifier import DaoFactory
 
 
@@ -11,6 +10,7 @@ class Search(commands.Cog):
 	def __init__(self, bot, db):
 		print("Init Cog")
 		self.__private_emojis = ["\N{SHIELD}", "\N{SPARKLING HEART}", "\N{CROSSED SWORDS}"]
+		self.__private_emojis_ut = ['🛡', '💖', '⚔']
 		self.db = db
 		self.bot = bot
 
@@ -20,11 +20,11 @@ class Search(commands.Cog):
 		embed = discord.Embed(title='Group Search', description=f"{name}", color=0xff0000)
 		embed.add_field(name="level min", value=f"{level}", inline=True)
 		embed.add_field(name="Departure", value=f"{departure}", inline=True)
-		embed.add_field(name="Tank: \N{SHIELD}", value=f"{username}" if role == 'tank' else "free", inline=False)
-		embed.add_field(name="Heal: \N{SPARKLING HEART}", value=f"{username}" if role == 'heal' else "free", inline=False)
-		embed.add_field(name="Dps \N{CROSSED SWORDS}", value=f"{username}" if role == 'dps' else "free", inline=False)
+		embed.add_field(name="Tank: \N{SHIELD}", value=f"{username}" if role == 'tank' else "-", inline=False)
+		embed.add_field(name="Heal: \N{SPARKLING HEART}", value=f"{username}" if role == 'heal' else "-", inline=False)
+		embed.add_field(name="Dps \N{CROSSED SWORDS}", value=f"{username}" if role == 'dps' else "-", inline=False)
 		while i < nb_player:
-			embed.add_field(name="Dps \N{CROSSED SWORDS}", value="free", inline=False)
+			embed.add_field(name="Dps \N{CROSSED SWORDS}", value="-", inline=False)
 			i += 1
 		return embed
 
@@ -43,6 +43,39 @@ class Search(commands.Cog):
 		messages = await ctx.channel.history(limit=number+1).flatten()
 		for each_message in messages:
 			await each_message.delete()
+
+
+	@commands.Cog.listener()
+	async def on_reaction_add(self, reaction, user):
+		print(f"{reaction.message.id}, {user.name}, {reaction.message.guild.id}")
+		guildID = reaction.message.guild.id
+		msgID = reaction.message.id
+		msg =  reaction.message
+		if user.id != self.bot.user.id and reaction.emoji in self.__private_emojis_ut:
+			if self.db.check_if_mess_exist(guildID, msgID):
+				new_embed = None
+				for e in msg.embeds:
+					new_embed = e.to_dict()
+					print(e.to_dict())
+					break
+				if reaction.emoji == '🛡':
+					for e in new_embed['fields']:
+						if e['name']  == 'Tank: 🛡' and e['value'] == '-':
+							e['value'] = user.name
+							break
+				elif reaction.emoji == '💖':
+					for e in new_embed['fields']:
+						if e['name'] == 'Heal: 💖' and e['value'] == '-':
+							e['value'] = user.name
+							break
+				elif reaction.emoji == '⚔':
+					for e in new_embed['fields']:
+						if e['name'] == 'Dps ⚔' and e['value'] == '-':
+							e['value'] = user.name
+							break
+
+				await msg.edit(embed=discord.Embed.from_dict(new_embed))
+				print(f"{reaction}, {user}")
 
 
 	@commands.command(name="delete")
@@ -108,7 +141,7 @@ class Search(commands.Cog):
 								await ctx.author.send('Took too long to answer!')
 							else:
 								embed = await self.__create_view_embed(name_activity, level_activity, \
-											number_player, departure, role.lower(), str(ctx.author).split('#')[0])
+											number_player, departure, role.lower(), ctx.author.name)
 								channel_id = self.db.get_channel_id(guildID)
 								chanel = self.bot.get_channel(int(channel_id))
 								mess = await chanel.send(embed=embed)
