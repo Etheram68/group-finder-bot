@@ -16,20 +16,21 @@ class DaoFactory:
                (guildID str, authorID str, name text, level int, number_p int, departure text)''')
 		self.cur.execute('''CREATE TABLE IF NOT EXISTS guild
                (guildID str, ownerID str, channelID str, categoryID str)''')
-		# # Init Expeditions
-		# self.cur.execute('''INSERT INTO expeditions
-		# 			VALUES('Amrine Excavation', 25, 5, 'Windsward')''')
-		# self.cur.execute('''INSERT INTO expeditions
-		# 			VALUES('Starstone Barrows', 35, 5, 'Everfall')''')
-		# self.cur.execute('''INSERT INTO expeditions
-		# 			VALUES('The Depths', 45, 5, 'Restless Shore')''')
-		# self.cur.execute('''INSERT INTO expeditions
-		# 			VALUES('Dynasty Shipyard', 55, 5, 'Ebonscale Reach')''')
-		# self.cur.execute('''INSERT INTO expeditions
-		# 			VALUES('Garden of Genesis', 60, 5, 'Edengrove')''')
-		# self.cur.execute('''INSERT INTO expeditions
-		# 			VALUES('Lazarus Instrumentality', 60, 5, 'Reekwater')''')
 		self.con.commit()
+
+
+	def drop_groups_author(self, guildID:str, authorID:str):
+		self.cur.execute("SELECT * FROM groups WHERE guildID=? AND authorID=?", (guildID, authorID))
+		res = self.cur.fetchone()
+		if res:
+			self.cur.execute("DELETE FROM groups WHERE authorID=?", (authorID,))
+			self.con.commit()
+
+
+	def get_groups_author(self, guildID:str, authorID:str):
+		self.cur.execute("SELECT * FROM groups WHERE guildID=? AND authorID=?", (guildID, authorID))
+		res = self.cur.fetchone()
+		return res
 
 
 	def set_groups_table(self, guildID:str, authorID:str, name:str, level:int, nb_player:int, departure:str):
@@ -40,8 +41,7 @@ class DaoFactory:
 			self.cur.execute("INSERT INTO groups VALUES(?, ?, ?, ?, ?, ?)", \
 							(guildID, authorID, name, level, nb_player, departure))
 			self.con.commit()
-		else:
-			raise Exception('User find always groups')
+
 
 	def set_guild_table(self, guildID:str, ownerID:str, channelID:str, categoryID:str):
 		self.cur.execute("SELECT * FROM guild WHERE guildID=? AND ownerID=?", (guildID, ownerID))

@@ -14,16 +14,11 @@ class Search(commands.Cog):
 
 
 	@commands.command()
-	async def __dm_user(ctx, member: discord.Member):
-		await ctx.author.send("** You have 60 second to answer each Questions! **")
-		await ctx.author.send("** Enter name of activity: (e.g  `Amrine Excavation`) **")
-
-
-	@commands.command()
 	async def help(self, ctx):
 		embed = discord.Embed(title="Help", description="",color=0x7289da)
 		embed.set_author(name=f"{ctx.guild.me.display_name}", icon_url=f"{ctx.guild.me.avatar_url}")
-		embed.add_field(name=f'**Commands**', value=f'**Create new find group:**\n\n`!find`\n\n------------\n\n', inline='false')
+		embed.add_field(name=f'**Commands**', value=f'**Create new find group:**\n\n`!find`\n\n------------\n\n'
+							 f'**Remove old find group:**\n\n`!delete`\n\n', inline='false')
 		await ctx.channel.send(embed=embed)
 
 
@@ -32,6 +27,17 @@ class Search(commands.Cog):
 		messages = await ctx.channel.history(limit=number+1).flatten()
 		for each_message in messages:
 			await each_message.delete()
+
+
+	@commands.command(name="delete")
+	async def drop_group(self, ctx):
+		guildID = ctx.guild.id
+		authorID = ctx.author.id
+		messages = await ctx.channel.history(limit=1).flatten()
+		for each_message in messages:
+			await each_message.delete()
+		self.db.drop_groups_author(guildID, authorID)
+		await ctx.author.send("** Last find group is removed **")
 
 
 	@commands.command(name="find")
@@ -43,41 +49,39 @@ class Search(commands.Cog):
 		messages = await ctx.channel.history(limit=1).flatten()
 		for each_message in messages:
 			await each_message.delete()
-		await ctx.author.send("** You have 60 second to answer each Questions! **")
-		await ctx.author.send("** Enter name of activity: (e.g  `Amrine Excavation`) **")
-		try:
-			name_activity = await self.bot.wait_for('message',check=check, timeout=60.0)
-			name_activity = name_activity.content
-		except asyncio.TimeoutError:
-			await ctx.channel.send('Took too long to answer!')
-		else:
-			await ctx.author.send("** Enter level min for play activity: (e.g  `25`) **")
+		if not self.db.get_groups_author(guildID, authorID):
+			await ctx.author.send("** You have 60 second to answer each Questions! **")
+			await ctx.author.send("** Enter name of activity: (e.g  `Amrine Excavation`) **")
 			try:
-				level_activity = await self.bot.wait_for('message',check=check, timeout=60.0)
-				level_activity = int(level_activity.content)
+				name_activity = await self.bot.wait_for('message',check=check, timeout=60.0)
+				name_activity = name_activity.content
 			except asyncio.TimeoutError:
 				await ctx.channel.send('Took too long to answer!')
 			else:
-				await ctx.author.send("** Enter number of players for this activity: (e.g  `5`) **")
+				await ctx.author.send("** Enter level min for play activity: (e.g  `25`) **")
 				try:
-					number_player = await self.bot.wait_for('message',check=check, timeout=60.0)
-					number_player = int(number_player.content)
+					level_activity = await self.bot.wait_for('message',check=check, timeout=60.0)
+					level_activity = int(level_activity.content)
 				except asyncio.TimeoutError:
 					await ctx.channel.send('Took too long to answer!')
 				else:
-					await ctx.author.send("** Enter departure for this activity: (e.g  `18h30`) **")
+					await ctx.author.send("** Enter number of players for this activity: (e.g  `5`) **")
 					try:
-						departure = await self.bot.wait_for('message',check=check, timeout=60.0)
-						departure = departure.content
+						number_player = await self.bot.wait_for('message',check=check, timeout=60.0)
+						number_player = int(number_player.content)
 					except asyncio.TimeoutError:
 						await ctx.channel.send('Took too long to answer!')
 					else:
+						await ctx.author.send("** Enter departure for this activity: (e.g  `18h30`) **")
 						try:
+							departure = await self.bot.wait_for('message',check=check, timeout=60.0)
+							departure = departure.content
+						except asyncio.TimeoutError:
+							await ctx.channel.send('Took too long to answer!')
+						else:
 							self.db.set_groups_table(guildID, authorID, name_activity, level_activity, number_player, departure)
-						except ValueError:
-							await ctx.author.send("** You find a group destruct this and restart **")
-
-		print(f"Name: {name_activity}, level: {level_activity}, nbPlayer: {number_player}, departure: {departure}")
+		else:
+			await ctx.author.send("** You find a group, please delete this and restart **")
 
 
 	@commands.command(name="setup")
