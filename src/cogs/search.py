@@ -10,7 +10,7 @@ from src.dao.classifier import DaoFactory
 class Search(commands.Cog):
 	def __init__(self, bot, db):
 		print("Init Cog")
-		self.__private_emojis = ["\N{SHIELD}", "\N{ADHESIVE BANDAGE}", "\N{CROSSED SWORDS}"]
+		self.__private_emojis = ["\N{SHIELD}", "\N{SPARKLING HEART}", "\N{CROSSED SWORDS}"]
 		self.db = db
 		self.bot = bot
 
@@ -18,13 +18,13 @@ class Search(commands.Cog):
 	async def __create_view_embed(self, name, level, nb_player, departure, role, username):
 		i = 3
 		embed = discord.Embed(title='Group Search', description=f"{name}", color=0xff0000)
-		embed.add_field(name="level", value=f"{level}", inline=True)
+		embed.add_field(name="level min", value=f"{level}", inline=True)
 		embed.add_field(name="Departure", value=f"{departure}", inline=True)
-		embed.add_field(name="Tank: \N{SHIELD}", value=f"{username}" if role == 'tank' else "undefined", inline=False)
-		embed.add_field(name="Heal: \N{ADHESIVE BANDAGE}", value=f"{username}" if role == 'heal' else "undefined", inline=False)
-		embed.add_field(name="Dps \N{CROSSED SWORDS}", value=f"{username}" if role == 'dps' else "undefined", inline=False)
+		embed.add_field(name="Tank: \N{SHIELD}", value=f"{username}" if role == 'tank' else "free", inline=False)
+		embed.add_field(name="Heal: \N{SPARKLING HEART}", value=f"{username}" if role == 'heal' else "free", inline=False)
+		embed.add_field(name="Dps \N{CROSSED SWORDS}", value=f"{username}" if role == 'dps' else "free", inline=False)
 		while i < nb_player:
-			embed.add_field(name="Dps \N{CROSSED SWORDS}", value="undefined", inline=False)
+			embed.add_field(name="Dps \N{CROSSED SWORDS}", value="free", inline=False)
 			i += 1
 		return embed
 
@@ -112,6 +112,8 @@ class Search(commands.Cog):
 								channel_id = self.db.get_channel_id(guildID)
 								chanel = self.bot.get_channel(int(channel_id))
 								mess = await chanel.send(embed=embed)
+								for emoji in self.__private_emojis:
+									await mess.add_reaction(emoji)
 								self.db.set_groups_table(guildID, authorID, name_activity, level_activity, number_player, departure, mess.id)
 								await ctx.author.send("** find group is created **")
 		else:
