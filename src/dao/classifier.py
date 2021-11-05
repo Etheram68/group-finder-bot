@@ -13,9 +13,9 @@ class DaoFactory:
 
 	def __init_tables_expeditions(self):
 		self.cur.execute('''CREATE TABLE IF NOT EXISTS groups
-               (guildID int, name text, level int, number_p int, territory text, departure text)''')
+               (guildID str, authorID str, name text, level int, number_p int, departure text)''')
 		self.cur.execute('''CREATE TABLE IF NOT EXISTS guild
-               (guildID int, ownerID int, channelID int, categoryID int)''')
+               (guildID str, ownerID str, channelID str, categoryID str)''')
 		# # Init Expeditions
 		# self.cur.execute('''INSERT INTO expeditions
 		# 			VALUES('Amrine Excavation', 25, 5, 'Windsward')''')
@@ -32,11 +32,20 @@ class DaoFactory:
 		self.con.commit()
 
 
-	def set_guild_table(self, guildID:int, ownerID:int, channelID:int, categoryID:int):
-		print(f"guildID = {guildID} ownerID = {ownerID} channelID = {channelID} categoryID = {categoryID}")
+	def set_groups_table(self, guildID:str, authorID:str, name:str, level:int, nb_player:int, departure:str):
+		self.cur.execute("SELECT * FROM groups WHERE guildID=? AND authorID=?", (guildID, authorID))
+		res = self.cur.fetchone()
+		if res is None:
+			print('Create')
+			self.cur.execute("INSERT INTO groups VALUES(?, ?, ?, ?, ?, ?)", \
+							(guildID, authorID, name, level, nb_player, departure))
+			self.con.commit()
+		else:
+			raise Exception('User find always groups')
+
+	def set_guild_table(self, guildID:str, ownerID:str, channelID:str, categoryID:str):
 		self.cur.execute("SELECT * FROM guild WHERE guildID=? AND ownerID=?", (guildID, ownerID))
 		res = self.cur.fetchone()
-		print(f"result: {res}")
 		if res is None:
 			print('create')
 			self.cur.execute("INSERT INTO guild VALUES(?, ?, ?, ?)", \
