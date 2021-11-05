@@ -53,7 +53,7 @@ class Search(commands.Cog):
 			else:
 				try:
 					channel = await cat_guild.create_text_channel(name=channel.content)
-					self.db.cur.execute("SELECT * FROM guild WHERE guildID=? AND id=?", (guildID, id))
+					self.db.cur.execute("SELECT * FROM guild WHERE guildID=?", (guildID))
 					res = self.db.cur.fetchone()
 					if res is None:
 						self.db.cur.execute("INSERT INTO guild VALUES(?, ?, ?, ?)", (guildID, id, channel.id, cat_id.content))
