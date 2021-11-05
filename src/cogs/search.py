@@ -3,25 +3,29 @@ from discord import channel
 from discord import client
 from discord.ext import commands
 import asyncio
+import time
 from src.dao.classifier import DaoFactory
 
 
 class Search(commands.Cog):
 	def __init__(self, bot, db):
 		print("Init Cog")
+		self.__private_emojis = ["\N{SHIELD}", "\N{ADHESIVE BANDAGE}", "\N{CROSSED SWORDS}"]
 		self.db = db
 		self.bot = bot
 
 
-	async def __create_view_embed(self, name, level, nb_player, departure):
+	async def __create_view_embed(self, name, level, nb_player, departure, role, username):
+		i = 3
 		embed = discord.Embed(title='Group Search', description=f"{name}", color=0xff0000)
 		embed.add_field(name="level", value=f"{level}", inline=True)
 		embed.add_field(name="Departure", value=f"{departure}", inline=True)
-		embed.add_field(name="Tank:", value="undefined", inline=False)
-		embed.add_field(name="Heal:", value="undefined", inline=False)
-		embed.add_field(name="Dps", value="undefined", inline=False)
-		embed.add_field(name="Dps", value="undefined", inline=False)
-		embed.add_field(name="Dps", value="undefined", inline=False)
+		embed.add_field(name="Tank: \N{SHIELD}", value=f"{username}" if role == 'tank' else "undefined", inline=False)
+		embed.add_field(name="Heal: \N{ADHESIVE BANDAGE}", value=f"{username}" if role == 'heal' else "undefined", inline=False)
+		embed.add_field(name="Dps \N{CROSSED SWORDS}", value=f"{username}" if role == 'dps' else "undefined", inline=False)
+		while i < nb_player:
+			embed.add_field(name="Dps \N{CROSSED SWORDS}", value="undefined", inline=False)
+			i += 1
 		return embed
 
 
@@ -96,11 +100,20 @@ class Search(commands.Cog):
 						except asyncio.TimeoutError:
 							await ctx.author.send('Took too long to answer!')
 						else:
-							embed = await self.__create_view_embed(name_activity, level_activity, number_player, departure)
-							channel_id = self.db.get_channel_id(guildID)
-							chanel = self.bot.get_channel(int(channel_id))
-							mess = await chanel.send(embed=embed)
-							self.db.set_groups_table(guildID, authorID, name_activity, level_activity, number_player, departure, mess.id)
+							mess = await ctx.author.send("** Choose your role: (e.g `dps/tank/heal`) **")
+							try:
+								role = await self.bot.wait_for('message',check=check, timeout=60.0)
+								role = role.content
+							except asyncio.TimeoutError:
+								await ctx.author.send('Took too long to answer!')
+							else:
+								embed = await self.__create_view_embed(name_activity, level_activity, \
+											number_player, departure, role.lower(), str(ctx.author).split('#')[0])
+								channel_id = self.db.get_channel_id(guildID)
+								chanel = self.bot.get_channel(int(channel_id))
+								mess = await chanel.send(embed=embed)
+								self.db.set_groups_table(guildID, authorID, name_activity, level_activity, number_player, departure, mess.id)
+								await ctx.author.send("** find group is created **")
 		else:
 			await ctx.author.send("** You find a group, please delete this and restart **")
 
