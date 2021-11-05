@@ -4,7 +4,6 @@ from discord import client
 from discord.ext import commands
 import asyncio
 from src.dao.classifier import DaoFactory
-import sqlite3
 
 
 class Search(commands.Cog):
@@ -17,6 +16,8 @@ class Search(commands.Cog):
 	@commands.command()
 	async def help(self, ctx):
 		embed = discord.Embed(title="Help", description="",color=0x7289da)
+		embed.set_author(name=f"{ctx.guild.me.display_name}", icon_url=f"{ctx.guild.me.avatar_url}")
+		embed.add_field(name=f'**Commands**', value=f'**Create new find group:**\n\n`!find`\n\n------------\n\n', inline='false')
 		await ctx.channel.send(embed=embed)
 
 
@@ -25,6 +26,16 @@ class Search(commands.Cog):
 		messages = await ctx.channel.history(limit=number+1).flatten()
 		for each_message in messages:
 			await each_message.delete()
+
+
+	@commands.command(name="find")
+	async def find_group(self, ctx):
+		guildID = ctx.guild.id
+		authorID = ctx.author.id
+		messages = await ctx.channel.history(limit=1).flatten()
+		for each_message in messages:
+			await each_message.delete()
+		member = await ctx.author.send("** Do you want to find Groups? **")
 
 
 	@commands.command(name="setup")
@@ -54,13 +65,10 @@ class Search(commands.Cog):
 			else:
 				try:
 					channel = await cat_guild.create_text_channel(name=channel.content)
+					self.db.set_guild_table(guildID, ownerID, channel.id, cat_id.content)
 				except:
 					await ctx.channel.send("You didn't enter the names properly.\nUse `!setup` again!")
 				else:
-					self.db.set_guild_table(guildID, ownerID, channel.id, cat_id.content)
-					messages = await ctx.channel.history(limit=6).flatten()
-					for each_message in messages:
-						await each_message.delete()
 					await ctx.channel.send(f"** Text Channel `{channel}` created with success**")
 
 

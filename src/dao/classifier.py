@@ -12,23 +12,23 @@ class DaoFactory:
 
 
 	def __init_tables_expeditions(self):
-		self.cur.execute('''CREATE TABLE IF NOT EXISTS expeditions
-               (name text, level int, number_p int, territory text)''')
+		self.cur.execute('''CREATE TABLE IF NOT EXISTS groups
+               (guildID int, name text, level int, number_p int, territory text, departure text)''')
 		self.cur.execute('''CREATE TABLE IF NOT EXISTS guild
                (guildID int, ownerID int, channelID int, categoryID int)''')
-		# Init Expeditions
-		self.cur.execute('''INSERT INTO expeditions
-					VALUES('Amrine Excavation', 25, 5, 'Windsward')''')
-		self.cur.execute('''INSERT INTO expeditions
-					VALUES('Starstone Barrows', 35, 5, 'Everfall')''')
-		self.cur.execute('''INSERT INTO expeditions
-					VALUES('The Depths', 45, 5, 'Restless Shore')''')
-		self.cur.execute('''INSERT INTO expeditions
-					VALUES('Dynasty Shipyard', 55, 5, 'Ebonscale Reach')''')
-		self.cur.execute('''INSERT INTO expeditions
-					VALUES('Garden of Genesis', 60, 5, 'Edengrove')''')
-		self.cur.execute('''INSERT INTO expeditions
-					VALUES('Lazarus Instrumentality', 60, 5, 'Reekwater')''')
+		# # Init Expeditions
+		# self.cur.execute('''INSERT INTO expeditions
+		# 			VALUES('Amrine Excavation', 25, 5, 'Windsward')''')
+		# self.cur.execute('''INSERT INTO expeditions
+		# 			VALUES('Starstone Barrows', 35, 5, 'Everfall')''')
+		# self.cur.execute('''INSERT INTO expeditions
+		# 			VALUES('The Depths', 45, 5, 'Restless Shore')''')
+		# self.cur.execute('''INSERT INTO expeditions
+		# 			VALUES('Dynasty Shipyard', 55, 5, 'Ebonscale Reach')''')
+		# self.cur.execute('''INSERT INTO expeditions
+		# 			VALUES('Garden of Genesis', 60, 5, 'Edengrove')''')
+		# self.cur.execute('''INSERT INTO expeditions
+		# 			VALUES('Lazarus Instrumentality', 60, 5, 'Reekwater')''')
 		self.con.commit()
 
 
