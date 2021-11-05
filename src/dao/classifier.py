@@ -7,7 +7,7 @@ class DaoFactory:
 		self.cur = self.con.cursor()
 		self.cur.execute('''SELECT count(*) from sqlite_master WHERE type='table' AND name='expeditions' ''')
 		rows = self.cur.fetchall()
-		if rows[0][0] == 0:
+		if rows is None:
 			self.__init_tables_expeditions()
 		print("Init Database ok")
 

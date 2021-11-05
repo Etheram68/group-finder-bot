@@ -53,15 +53,20 @@ class Search(commands.Cog):
 			else:
 				try:
 					channel = await cat_guild.create_text_channel(name=channel.content)
-					self.db.cur.execute("INSERT INTO guild VALUES(?, ?, ?, ?)", (guildID, id, channel.id, cat_id.content))
-					self.db.con.commit()
+					self.db.cur.execute("SELECT * FROM guild WHERE guildID=? AND id=?", (guildID, id))
+					res = self.db.cur.fetchone()
+					if res is None:
+						self.db.cur.execute("INSERT INTO guild VALUES(?, ?, ?, ?)", (guildID, id, channel.id, cat_id.content))
+					else:
+						self.db.cur.execute("UPDATE guild SET guildID=?, id=?, channelID=?, categoryID=?", (guildID, id, channel.id, cat_id.content))
 				except:
 					await ctx.channel.send("You didn't enter the names properly.\nUse `!setup` again!")
 				else:
 					messages = await ctx.channel.history(limit=6).flatten()
 					for each_message in messages:
 						await each_message.delete()
-					await ctx.channel.send(f"** Your created text Channel `{channel}` with success**")
+					await ctx.channel.send(f"** Text Channel `{channel}` created with success**")
+		self.db.con.commit()
 
 
 def setup(bot):
