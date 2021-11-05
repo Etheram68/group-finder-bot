@@ -17,7 +17,7 @@ class Search(commands.Cog):
 
 	async def __create_view_embed(self, name, level, nb_player, departure, role, username):
 		i = 3
-		embed = discord.Embed(title='Group Search', description=f"{name}", color=0xff0000)
+		embed = discord.Embed(title='Group Search New World', description=f"{name}", color=0xff0000)
 		embed.add_field(name="level min", value=f"{level}", inline=True)
 		embed.add_field(name="Departure", value=f"{departure}", inline=True)
 		embed.add_field(name="Tank: \N{SHIELD}", value=f"{username}" if role == 'tank' else "-", inline=False)
@@ -38,13 +38,6 @@ class Search(commands.Cog):
 		await ctx.channel.send(embed=embed)
 
 
-	@commands.command(name="del")
-	async def delete(self, ctx, number: int):
-		messages = await ctx.channel.history(limit=number+1).flatten()
-		for each_message in messages:
-			await each_message.delete()
-
-
 	@commands.Cog.listener()
 	async def on_reaction_remove(self, reaction, user):
 		guildID = reaction.message.guild.id
@@ -55,10 +48,21 @@ class Search(commands.Cog):
 			for e in msg.embeds:
 				new_embed = e.to_dict()
 				break
-			for e in new_embed['fields']:
-				if e['value'] == user.name:
-					e['value'] = '-'
-					break
+			if reaction.emoji == '🛡':
+				for e in new_embed['fields']:
+					if e['name']  == 'Tank: 🛡' and e['value'] == user.name:
+						e['value'] = '-'
+						break
+			elif reaction.emoji == '💖':
+				for e in new_embed['fields']:
+					if e['name'] == 'Heal: 💖' and e['value'] == user.name:
+						e['value'] = '-'
+						break
+			elif reaction.emoji == '⚔':
+				for e in new_embed['fields']:
+					if e['name'] == 'Dps ⚔' and e['value'] == user.name:
+						e['value'] = '-'
+						break
 			await msg.edit(embed=discord.Embed.from_dict(new_embed))
 
 
@@ -73,6 +77,10 @@ class Search(commands.Cog):
 				for e in msg.embeds:
 					new_embed = e.to_dict()
 					break
+				for e in new_embed['fields']:
+					if e['value'] == user.name:
+						await msg.remove_reaction(reaction.emoji, user)
+						return
 				if reaction.emoji == '🛡':
 					for e in new_embed['fields']:
 						if e['name']  == 'Tank: 🛡' and e['value'] == '-':
@@ -88,7 +96,6 @@ class Search(commands.Cog):
 						if e['name'] == 'Dps ⚔' and e['value'] == '-':
 							e['value'] = user.name
 							break
-
 				await msg.edit(embed=discord.Embed.from_dict(new_embed))
 
 
