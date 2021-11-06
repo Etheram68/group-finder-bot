@@ -15,7 +15,7 @@ class Search(commands.Cog):
 		self.bot = bot
 
 
-	async def __create_view_embed(self, name, level, nb_player, departure, role, username):
+	async def __create_view_embed(self, name, level,departure, role, username, nb_player=5):
 		i = 3
 		embed = discord.Embed(title='Group Search New World', description=f"{name}", color=0xff0000)
 		embed.add_field(name="level min", value=f"{level}", inline=True)
@@ -33,8 +33,8 @@ class Search(commands.Cog):
 	async def help(self, ctx):
 		embed = discord.Embed(title="Help", description="",color=0x7289da)
 		embed.set_author(name=f"{ctx.guild.me.display_name}", icon_url=f"{ctx.guild.me.avatar_url}")
-		embed.add_field(name=f'**Commands**', value=f'**Create new find group:**\n\n`!find`\n\n------------\n\n'
-							 f'**Remove old find group:**\n\n`!delete`\n\n', inline='false')
+		embed.add_field(name=f'**Commands**', value=f'**Start new request group:**\n\n`!search`\n\n------------\n\n'
+							 f'**Remove old request group:**\n\n`!delete`\n\n', inline='false')
 		await ctx.channel.send(embed=embed)
 
 
@@ -112,10 +112,10 @@ class Search(commands.Cog):
 		msg = await chanel.fetch_message(id_mess)
 		self.db.drop_groups_author(guildID, authorID)
 		await msg.delete()
-		await ctx.author.send("** Last find group is removed **")
+		await ctx.author.send("** Your request group is successfully deleted **")
 
 
-	@commands.command(name="find")
+	@commands.command(name="search")
 	async def find_group(self, ctx):
 		guildID = ctx.guild.id
 		authorID = ctx.author.id
@@ -125,13 +125,13 @@ class Search(commands.Cog):
 		for each_message in messages:
 			await each_message.delete()
 		if not self.db.get_groups_author(guildID, authorID):
-			await ctx.author.send("** You have 60 second to answer each Questions! **")
-			await ctx.author.send("** Enter name of activity: (e.g  `Amrine Excavation`) **")
+			await ctx.author.send(f"** You have 60 second to answer each Questions! **\n"
+									f"** Enter name of activity: (e.g  `Amrine Excavation`) **")
 			try:
 				name_activity = await self.bot.wait_for('message',check=check, timeout=60.0)
 				name_activity = name_activity.content
 			except asyncio.TimeoutError:
-				await ctx.channel.send('Took too long to answer!')
+				await ctx.author.send('Took too long to answer!')
 			else:
 				await ctx.author.send("** Enter level min for play activity: (e.g  `25`) **")
 				try:
@@ -140,12 +140,15 @@ class Search(commands.Cog):
 				except asyncio.TimeoutError:
 					await ctx.author.send('Took too long to answer!')
 				else:
-					await ctx.author.send("** Enter number of players for this activity: (e.g  `5`) **")
-					try:
-						number_player = await self.bot.wait_for('message',check=check, timeout=60.0)
-						number_player = int(number_player.content)
-					except asyncio.TimeoutError:
-						await ctx.author.send('Took too long to answer!')
+					number_player = 5
+					# await ctx.author.send("** Enter number of players for this activity: (e.g  `5`) **")
+					# try:
+					# 	number_player = await self.bot.wait_for('message',check=check, timeout=60.0)
+					# 	number_player = int(number_player.content)
+					# except asyncio.TimeoutError:
+					# 	await ctx.author.send('Took too long to answer!')
+					if False:
+						return
 					else:
 						await ctx.author.send("** Enter departure for this activity: (e.g  `18h30`) **")
 						try:
@@ -162,16 +165,17 @@ class Search(commands.Cog):
 								await ctx.author.send('Took too long to answer!')
 							else:
 								embed = await self.__create_view_embed(name_activity, level_activity, \
-											number_player, departure, role.lower(), ctx.author.name)
+											departure, role.lower(), ctx.author.name, number_player)
 								channel_id = self.db.get_channel_id(guildID)
 								chanel = self.bot.get_channel(int(channel_id))
 								mess = await chanel.send(embed=embed)
 								for emoji in self.__private_emojis:
 									await mess.add_reaction(emoji)
 								self.db.set_groups_table(guildID, authorID, name_activity, level_activity, number_player, departure, mess.id)
-								await ctx.author.send("** find group is created **")
+								await ctx.author.send("** Your request group is successfully completed **")
 		else:
-			await ctx.author.send("** You find a group, please delete this and restart **")
+			await ctx.author.send(f"** You have a request in instances,\n"
+									f"Use command `!delete` and restart **")
 
 
 	@commands.command(name="setup")
@@ -182,7 +186,7 @@ class Search(commands.Cog):
 		def check(m):
 			return m.author.id == ctx.author.id
 		await ctx.channel.send("** You have 60 second to answer each Questions! **")
-		await ctx.channel.send("** Enter id of category for create guild channel? **")
+		await ctx.channel.send("** Enter ID of category for create text channel? **")
 		try:
 			cat_id = await self.bot.wait_for('message', check=check, timeout=60.0)
 			cat_guild = discord.utils.get(ctx.guild.categories, id=int(cat_id.content))
@@ -191,7 +195,7 @@ class Search(commands.Cog):
 		except asyncio.TimeoutError:
 			await ctx.channel.send('Took too long to answer!')
 		except:
-			await ctx.channel.send("Error: You didn't enter the id properly.\nUse `!setup` again!")
+			await ctx.channel.send("Error: You didn't enter the ID properly.\nUse `!setup` again!")
 		else:
 			await ctx.channel.send("** Enter the name of the text channel: (e.g Find player)**")
 			try:
@@ -205,7 +209,7 @@ class Search(commands.Cog):
 				except:
 					await ctx.channel.send("You didn't enter the names properly.\nUse `!setup` again!")
 				else:
-					await ctx.channel.send(f"** Text Channel `{channel}` created with success**")
+					await ctx.channel.send(f"** Text Channel `{channel}` successfully created **")
 
 
 def setup(bot):
