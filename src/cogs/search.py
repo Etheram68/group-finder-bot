@@ -36,7 +36,7 @@ class Search(commands.Cog):
 	@commands.Cog.listener()
 	async def on_command_error(self, ctx, error):
 		if isinstance(ctx.channel, discord.channel.DMChannel):
-			if ctx.message != '!help':
+			if ctx.message != '!cmd':
 				await ctx.author.send("**I can't execute that command inside DMs**")
 
 
