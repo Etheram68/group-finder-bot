@@ -33,13 +33,22 @@ class Search(commands.Cog):
 		return embed
 
 
+	@commands.Cog.listener()
+	async def on_command_error(self, ctx, error):
+		if isinstance(ctx.channel, discord.channel.DMChannel):
+			if ctx.message != '!help':
+				await ctx.author.send("**I can't execute that command inside DMs**")
+
+
 	@commands.command()
 	async def help(self, ctx):
 		embed = discord.Embed(title="Help", description="",color=0x7289da)
 		# embed.set_author(name=f"{ctx.guild.me.display_name}", icon_url=f"{ctx.guild.me.avatar_url}")
 		embed.add_field(name=f'**Commands**', value=f'**Start new request group:**\n\n`!search`\n\n------------\n\n'
-							 f'**Remove old request group:**\n\n`!delete`\n\n', inline='false')
+							 f'**Remove old request group:**\n\n`!delete`\n\n------------\n\n'
+							 f'**Print man help:**\n\n`!help`\n\n', inline='false')
 		await ctx.channel.send(embed=embed)
+		await ctx.message.delete()
 
 
 	@commands.Cog.listener()
@@ -107,16 +116,17 @@ class Search(commands.Cog):
 	async def drop_group(self, ctx):
 		guildID = ctx.guild.id
 		authorID = ctx.author.id
-		messages = await ctx.channel.history(limit=1).flatten()
-		for each_message in messages:
-			await each_message.delete()
 		id_mess = self.db.get_id_mess(guildID, authorID)
-		channel_id = self.db.get_channel_id(guildID)
-		chanel = self.bot.get_channel(int(channel_id))
-		msg = await chanel.fetch_message(id_mess)
-		self.db.drop_groups_author(guildID, authorID)
-		await msg.delete()
-		await ctx.author.send("** Your request group is successfully deleted **")
+		if not id_mess:
+			await ctx.author.send("** You have no pending request **")
+		else:
+			channel_id = self.db.get_channel_id(guildID)
+			chanel = self.bot.get_channel(int(channel_id))
+			msg = await chanel.fetch_message(id_mess)
+			self.db.drop_groups_author(guildID, authorID)
+			await msg.delete()
+			await ctx.author.send("** Your request group is successfully deleted **")
+		await ctx.message.delete()
 
 
 	@commands.command(name="search")
@@ -125,9 +135,9 @@ class Search(commands.Cog):
 		authorID = ctx.author.id
 		def check(m):
 			return m.author == ctx.author
-		messages = await ctx.channel.history(limit=1).flatten()
-		for each_message in messages:
-			await each_message.delete()
+		# messages = await ctx.channel.history(limit=1).flatten()
+		# for each_message in messages:
+		# 	await each_message.delete()
 		if not self.db.get_groups_author(guildID, authorID):
 			await ctx.author.send(f"** You have 60 second to answer each Questions! **\n"
 									f"** Enter name of activity: (e.g  `Amrine Excavation`) **")
@@ -136,6 +146,7 @@ class Search(commands.Cog):
 				name_activity = name_activity.content
 			except asyncio.TimeoutError:
 				await ctx.author.send('Took too long to answer!')
+				await ctx.message.delete()
 			else:
 				await ctx.author.send("** Enter level min for play activity: (e.g  `25`) **")
 				try:
@@ -143,8 +154,10 @@ class Search(commands.Cog):
 					level_activity = int(level_activity.content)
 				except asyncio.TimeoutError:
 					await ctx.author.send('Took too long to answer!')
+					await ctx.message.delete()
 				except ValueError:
 					await ctx.author.send('Error: you have not enter a Number!\n**Please Restart**')
+					await ctx.message.delete()
 				else:
 					number_player = 5
 					# await ctx.author.send("** Enter number of players for this activity: (e.g  `5`) **")
@@ -164,8 +177,10 @@ class Search(commands.Cog):
 								raise ValueError
 						except asyncio.TimeoutError:
 							await ctx.author.send('Took too long to answer!')
+							await ctx.message.delete()
 						except ValueError:
-								await ctx.author.send('Enter a valide hours (e.g  `18h` `18h30`)\n **Please restart**')
+							await ctx.author.send('Enter a valide hours (e.g  `18h` `18h30`)\n **Please restart**')
+							await ctx.message.delete()
 						else:
 							mess = await ctx.author.send("** Choose your role: (e.g `dps/tank/heal`) **")
 							try:
@@ -175,8 +190,10 @@ class Search(commands.Cog):
 									raise ValueError
 							except asyncio.TimeoutError:
 								await ctx.author.send('Took too long to answer!')
+								await ctx.message.delete()
 							except ValueError:
 								await ctx.author.send('You need to choice `Tank`, `Dps` or `Heal`\n **Please restart**')
+								await ctx.message.delete()
 							else:
 								embed = await self.__create_view_embed(name_activity, level_activity, \
 											departure, role.lower(), ctx.author.id, number_player)
@@ -191,6 +208,7 @@ class Search(commands.Cog):
 		else:
 			await ctx.author.send(f"** You have a request in instances,\n"
 									f"Use command `!delete` and restart **")
+		await ctx.message.delete()
 
 
 	@commands.command(name="setup")
@@ -198,33 +216,41 @@ class Search(commands.Cog):
 	async def setup(self, ctx):
 		guildID = ctx.guild.id
 		ownerID = ctx.author.id
-		def check(m):
-			return m.author.id == ctx.author.id
-		await ctx.channel.send("** You have 60 second to answer each Questions! **")
-		await ctx.channel.send("** Enter ID of category for create text channel? **")
-		try:
-			cat_id = await self.bot.wait_for('message', check=check, timeout=60.0)
-			cat_guild = discord.utils.get(ctx.guild.categories, id=int(cat_id.content))
-			if not cat_guild:
-				raise Exception("Guild id not found")
-		except asyncio.TimeoutError:
-			await ctx.channel.send('Took too long to answer!')
-		except:
-			await ctx.channel.send("Error: You didn't enter the ID properly.\nUse `!setup` again!")
-		else:
-			await ctx.channel.send("** Enter the name of the text channel: (e.g Find player)**")
+		if ctx.author.id == ctx.guild.owner.id:
+			def check(m):
+				return m.author.id == ctx.author.id
+			await ctx.channel.send("** You have 60 second to answer each Questions! **")
+			await ctx.channel.send("** Enter ID of category for create text channel? **")
 			try:
-				channel = await self.bot.wait_for('message', check=check, timeout=60.0)
+				cat_id = await self.bot.wait_for('message', check=check, timeout=60.0)
+				cat_guild = discord.utils.get(ctx.guild.categories, id=int(cat_id.content))
+				if not cat_guild:
+					raise Exception("Guild id not found")
 			except asyncio.TimeoutError:
 				await ctx.channel.send('Took too long to answer!')
+				await ctx.message.delete()
+			except:
+				await ctx.channel.send("Error: You didn't enter the ID properly.\nUse `!setup` again!")
+				await ctx.message.delete()
 			else:
+				await ctx.channel.send("** Enter the name of the text channel: (e.g Find player)**")
 				try:
-					channel = await cat_guild.create_text_channel(name=channel.content)
-					self.db.set_guild_table(guildID, ownerID, channel.id, cat_id.content)
-				except:
-					await ctx.channel.send("You didn't enter the names properly.\nUse `!setup` again!")
+					channel = await self.bot.wait_for('message', check=check, timeout=60.0)
+				except asyncio.TimeoutError:
+					await ctx.channel.send('Took too long to answer!')
+					await ctx.message.delete()
 				else:
-					await ctx.channel.send(f"** Text Channel `{channel}` successfully created **")
+					try:
+						channel = await cat_guild.create_text_channel(name=channel.content)
+						self.db.set_guild_table(guildID, ownerID, channel.id, cat_id.content)
+					except:
+						await ctx.channel.send("You didn't enter the names properly.\nUse `!setup` again!")
+						await ctx.message.delete()
+					else:
+						await ctx.channel.send(f"** Text Channel `{channel}` successfully created **")
+		else:
+			await ctx.channel.send(f"{ctx.author.mention} only the owner of the server can setup the bot!")
+		await ctx.message.delete()
 
 
 def setup(bot):
