@@ -4,6 +4,7 @@ from discord import client
 from discord.ext import commands
 import asyncio
 from src.dao.classifier import DaoFactory
+from random import randrange
 
 
 class Search(commands.Cog):
@@ -11,18 +12,22 @@ class Search(commands.Cog):
 		print("Init Cog")
 		self.__private_emojis = ["\N{SHIELD}", "\N{SPARKLING HEART}", "\N{CROSSED SWORDS}"]
 		self.__private_emojis_ut = ['🛡', '💖', '⚔']
+		self.__private_colors = [0xff0000, 0xa8009a, 0x001eff, 0x00d5ff, 0x00ff2a,
+								 0xffdd00, 0xff4000, 0xffffff, 0x7756d2]
+		self.__private_colors_nb = len(self.__private_colors)
 		self.db = db
 		self.bot = bot
 
 
 	async def __create_view_embed(self, name, level,departure, role, username, nb_player=5):
 		i = 3
-		embed = discord.Embed(title='Group Search New World', description=f"{name}", color=0xff0000)
+		embed = discord.Embed(title=f'** Request Search group: **', description=f"** `{name}` **", \
+								color=self.__private_colors[randrange(self.__private_colors_nb)])
 		embed.add_field(name="level min", value=f"{level}", inline=True)
 		embed.add_field(name="Departure", value=f"{departure}", inline=True)
-		embed.add_field(name="Tank: \N{SHIELD}", value=f"{username}" if role == 'tank' else "-", inline=False)
-		embed.add_field(name="Heal: \N{SPARKLING HEART}", value=f"{username}" if role == 'heal' else "-", inline=False)
-		embed.add_field(name="Dps \N{CROSSED SWORDS}", value=f"{username}" if role == 'dps' else "-", inline=False)
+		embed.add_field(name="Tank: \N{SHIELD}", value=f"<@!{username}>" if role == 'tank' else "-", inline=False)
+		embed.add_field(name="Heal: \N{SPARKLING HEART}", value=f"<@!{username}>" if role == 'heal' else "-", inline=False)
+		embed.add_field(name="Dps \N{CROSSED SWORDS}", value=f"<@!{username}>" if role == 'dps' else "-", inline=False)
 		while i < nb_player:
 			embed.add_field(name="Dps \N{CROSSED SWORDS}", value="-", inline=False)
 			i += 1
@@ -50,17 +55,17 @@ class Search(commands.Cog):
 				break
 			if reaction.emoji == '🛡':
 				for e in new_embed['fields']:
-					if e['name']  == 'Tank: 🛡' and e['value'] == user.name:
+					if e['name']  == 'Tank: 🛡' and e['value'] == f"<@!{user.id}>":
 						e['value'] = '-'
 						break
 			elif reaction.emoji == '💖':
 				for e in new_embed['fields']:
-					if e['name'] == 'Heal: 💖' and e['value'] == user.name:
+					if e['name'] == 'Heal: 💖' and e['value'] == f"<@!{user.id}>":
 						e['value'] = '-'
 						break
 			elif reaction.emoji == '⚔':
 				for e in new_embed['fields']:
-					if e['name'] == 'Dps ⚔' and e['value'] == user.name:
+					if e['name'] == 'Dps ⚔' and e['value'] == f"<@!{user.id}>":
 						e['value'] = '-'
 						break
 			await msg.edit(embed=discord.Embed.from_dict(new_embed))
@@ -78,23 +83,23 @@ class Search(commands.Cog):
 					new_embed = e.to_dict()
 					break
 				for e in new_embed['fields']:
-					if e['value'] == user.name:
+					if e['value'] == f"<@!{user.id}>":
 						await msg.remove_reaction(reaction.emoji, user)
 						return
 				if reaction.emoji == '🛡':
 					for e in new_embed['fields']:
 						if e['name']  == 'Tank: 🛡' and e['value'] == '-':
-							e['value'] = user.name
+							e['value'] = f"<@!{user.id}>"
 							break
 				elif reaction.emoji == '💖':
 					for e in new_embed['fields']:
 						if e['name'] == 'Heal: 💖' and e['value'] == '-':
-							e['value'] = user.name
+							e['value'] = f"<@!{user.id}>"
 							break
 				elif reaction.emoji == '⚔':
 					for e in new_embed['fields']:
 						if e['name'] == 'Dps ⚔' and e['value'] == '-':
-							e['value'] = user.name
+							e['value'] = f"<@!{user.id}>"
 							break
 				await msg.edit(embed=discord.Embed.from_dict(new_embed))
 
@@ -165,7 +170,7 @@ class Search(commands.Cog):
 								await ctx.author.send('Took too long to answer!')
 							else:
 								embed = await self.__create_view_embed(name_activity, level_activity, \
-											departure, role.lower(), ctx.author.name, number_player)
+											departure, role.lower(), ctx.author.id, number_player)
 								channel_id = self.db.get_channel_id(guildID)
 								chanel = self.bot.get_channel(int(channel_id))
 								mess = await chanel.send(embed=embed)
