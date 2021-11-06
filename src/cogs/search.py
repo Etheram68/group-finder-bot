@@ -1,10 +1,9 @@
 import discord
-from discord import channel
-from discord import client
 from discord.ext import commands
 import asyncio
 from src.dao.classifier import DaoFactory
 from random import randrange
+import re
 
 
 class Search(commands.Cog):
@@ -144,6 +143,8 @@ class Search(commands.Cog):
 					level_activity = int(level_activity.content)
 				except asyncio.TimeoutError:
 					await ctx.author.send('Took too long to answer!')
+				except ValueError:
+					await ctx.author.send('Error: you have not enter a Number!\n**Please Restart**')
 				else:
 					number_player = 5
 					# await ctx.author.send("** Enter number of players for this activity: (e.g  `5`) **")
@@ -159,15 +160,23 @@ class Search(commands.Cog):
 						try:
 							departure = await self.bot.wait_for('message',check=check, timeout=60.0)
 							departure = departure.content
+							if not re.search("^([0-1]?[0-9]|2[0-3])(h|H)", departure):
+								raise ValueError
 						except asyncio.TimeoutError:
 							await ctx.author.send('Took too long to answer!')
+						except ValueError:
+								await ctx.author.send('Enter a valide hours (e.g  `18h` `18h30`)\n **Please restart**')
 						else:
 							mess = await ctx.author.send("** Choose your role: (e.g `dps/tank/heal`) **")
 							try:
 								role = await self.bot.wait_for('message',check=check, timeout=60.0)
 								role = role.content
+								if not role.lower() in ['dps', 'tank', 'heal']:
+									raise ValueError
 							except asyncio.TimeoutError:
 								await ctx.author.send('Took too long to answer!')
+							except ValueError:
+								await ctx.author.send('You need to choice `Tank`, `Dps` or `Heal`\n **Please restart**')
 							else:
 								embed = await self.__create_view_embed(name_activity, level_activity, \
 											departure, role.lower(), ctx.author.id, number_player)
@@ -176,7 +185,8 @@ class Search(commands.Cog):
 								mess = await chanel.send(embed=embed)
 								for emoji in self.__private_emojis:
 									await mess.add_reaction(emoji)
-								self.db.set_groups_table(guildID, authorID, name_activity, level_activity, number_player, departure, mess.id)
+								self.db.set_groups_table(guildID, authorID, name_activity, \
+										level_activity, number_player, departure, mess.id)
 								await ctx.author.send("** Your request group is successfully completed **")
 		else:
 			await ctx.author.send(f"** You have a request in instances,\n"
