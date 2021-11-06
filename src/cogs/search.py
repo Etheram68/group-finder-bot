@@ -41,12 +41,12 @@ class Search(commands.Cog):
 
 
 	@commands.command()
-	async def help(self, ctx):
+	async def ghelp(self, ctx):
 		embed = discord.Embed(title="Help", description="",color=0x7289da)
 		# embed.set_author(name=f"{ctx.guild.me.display_name}", icon_url=f"{ctx.guild.me.avatar_url}")
 		embed.add_field(name=f'**Commands**', value=f'**Start new request group:**\n\n`!search`\n\n------------\n\n'
 							 f'**Remove old request group:**\n\n`!delete`\n\n------------\n\n'
-							 f'**Print man help:**\n\n`!help`\n\n', inline='false')
+							 f'**Print man help:**\n\n`!ghelp`\n\n', inline='false')
 		await ctx.channel.send(embed=embed)
 		await ctx.message.delete()
 
