@@ -9,8 +9,7 @@ import re
 class Search(commands.Cog):
 	def __init__(self, bot, db):
 		print("Init Cog")
-		self.__private_emojis = ["\N{SHIELD}", "\N{SPARKLING HEART}", "\N{CROSSED SWORDS}"]
-		self.__private_emojis_ut = ['🛡', '💖', '⚔']
+		self.__private_emojis_ut = ['🛡', '💖', '⚔', '❌']
 		self.__private_colors = [0xff0000, 0xa8009a, 0x001eff, 0x00d5ff, 0x00ff2a,
 								 0xffdd00, 0xff4000, 0xffffff, 0x7756d2]
 		self.__private_colors_nb = len(self.__private_colors)
@@ -38,6 +37,7 @@ class Search(commands.Cog):
 		if isinstance(ctx.channel, discord.channel.DMChannel):
 			if ctx.message != '!cmd':
 				await ctx.author.send("**I can't execute that command inside DMs**")
+		return
 
 
 	@commands.command()
@@ -49,166 +49,168 @@ class Search(commands.Cog):
 							 f'**Print man help:**\n\n`!cmd`\n\n', inline='false')
 		await ctx.channel.send(embed=embed)
 		await ctx.message.delete()
-
-
-	@commands.Cog.listener()
-	async def on_reaction_remove(self, reaction, user):
-		guildID = reaction.message.guild.id
-		msgID = reaction.message.id
-		msg =  reaction.message
-		if reaction.emoji in self.__private_emojis_ut and self.db.check_if_mess_exist(guildID, msgID):
-			new_embed = None
-			for e in msg.embeds:
-				new_embed = e.to_dict()
-				break
-			if reaction.emoji == '🛡':
-				for e in new_embed['fields']:
-					if e['name']  == 'Tank: 🛡' and e['value'] == f"<@!{user.id}>":
-						e['value'] = '-'
-						break
-			elif reaction.emoji == '💖':
-				for e in new_embed['fields']:
-					if e['name'] == 'Heal: 💖' and e['value'] == f"<@!{user.id}>":
-						e['value'] = '-'
-						break
-			elif reaction.emoji == '⚔':
-				for e in new_embed['fields']:
-					if e['name'] == 'Dps ⚔' and e['value'] == f"<@!{user.id}>":
-						e['value'] = '-'
-						break
-			await msg.edit(embed=discord.Embed.from_dict(new_embed))
+		return
 
 
 	@commands.Cog.listener()
 	async def on_reaction_add(self, reaction, user):
 		guildID = reaction.message.guild.id
-		msgID = reaction.message.id
-		msg =  reaction.message
-		if user.id != self.bot.user.id and reaction.emoji in self.__private_emojis_ut:
-			if self.db.check_if_mess_exist(guildID, msgID):
-				new_embed = None
-				for e in msg.embeds:
-					new_embed = e.to_dict()
-					break
-				for e in new_embed['fields']:
-					if e['value'] == f"<@!{user.id}>":
-						await msg.remove_reaction(reaction.emoji, user)
-						return
-				if reaction.emoji == '🛡':
-					for e in new_embed['fields']:
-						if e['name']  == 'Tank: 🛡' and e['value'] == '-':
-							e['value'] = f"<@!{user.id}>"
-							break
-				elif reaction.emoji == '💖':
-					for e in new_embed['fields']:
-						if e['name'] == 'Heal: 💖' and e['value'] == '-':
-							e['value'] = f"<@!{user.id}>"
-							break
-				elif reaction.emoji == '⚔':
-					for e in new_embed['fields']:
-						if e['name'] == 'Dps ⚔' and e['value'] == '-':
-							e['value'] = f"<@!{user.id}>"
-							break
-				await msg.edit(embed=discord.Embed.from_dict(new_embed))
+		channel_id = self.db.get_channel_id(guildID)
+		if channel_id == reaction.message.channel.id:
+			msgID = reaction.message.id
+			msg =  reaction.message
+			if user.id != self.bot.user.id and reaction.emoji in self.__private_emojis_ut:
+				if self.db.check_if_mess_exist(guildID, msgID):
+					new_embed = None
+					for e in msg.embeds:
+						new_embed = e.to_dict()
+						break
+					if reaction.emoji == '❌':
+						for e in new_embed['fields']:
+							if e['value'] == f"<@!{user.id}>":
+								e['value'] = '-'
+								break
+						embed_empty = False
+						for e in new_embed['fields']:
+							if (e['name']  == 'Tank: 🛡' \
+									or e['name'] == 'Heal: 💖' \
+									or e['name'] == 'Dps ⚔') \
+									and e['value'] != '-':
+								embed_empty = False
+								break
+							else:
+								embed_empty = True
+						if embed_empty:
+							chanel = self.bot.get_channel(int(channel_id))
+							msg = await chanel.fetch_message(msgID)
+							self.db.drop_groups_mes(guildID, msgID)
+							await msg.delete()
+							return
+					else:
+						for e in new_embed['fields']:
+							if e['value'] == f"<@!{user.id}>":
+								await msg.remove_reaction(reaction.emoji, user)
+								return
+						if reaction.emoji == '🛡':
+							for e in new_embed['fields']:
+								if e['name']  == 'Tank: 🛡' and e['value'] == '-':
+									e['value'] = f"<@!{user.id}>"
+									break
+						elif reaction.emoji == '💖':
+							for e in new_embed['fields']:
+								if e['name'] == 'Heal: 💖' and e['value'] == '-':
+									e['value'] = f"<@!{user.id}>"
+									break
+						elif reaction.emoji == '⚔':
+							for e in new_embed['fields']:
+								if e['name'] == 'Dps ⚔' and e['value'] == '-':
+									e['value'] = f"<@!{user.id}>"
+									break
+					await msg.remove_reaction(reaction.emoji, user)
+					await msg.edit(embed=discord.Embed.from_dict(new_embed))
+		return
 
 
 	@commands.command(name="delete")
 	async def drop_group(self, ctx):
 		guildID = ctx.guild.id
-		authorID = ctx.author.id
-		id_mess = self.db.get_id_mess(guildID, authorID)
-		if not id_mess:
-			await ctx.author.send("** You have no pending request **")
-		else:
-			channel_id = self.db.get_channel_id(guildID)
-			chanel = self.bot.get_channel(int(channel_id))
-			msg = await chanel.fetch_message(id_mess)
-			self.db.drop_groups_author(guildID, authorID)
-			await msg.delete()
-			await ctx.author.send("** Your request group is successfully deleted **")
-		await ctx.message.delete()
+		channel_id = self.db.get_channel_id(guildID)
+		if channel_id == ctx.message.channel.id:
+			authorID = ctx.author.id
+			id_mess = self.db.get_id_mess(guildID, authorID)
+			if not id_mess:
+				await ctx.author.send("** You have no pending request **")
+			else:
+				channel_id = self.db.get_channel_id(guildID)
+				chanel = self.bot.get_channel(int(channel_id))
+				msg = await chanel.fetch_message(id_mess)
+				self.db.drop_groups_author(guildID, authorID)
+				await msg.delete()
+				await ctx.author.send("** Your request group is successfully deleted **")
+			await ctx.message.delete()
+		return
 
 
 	@commands.command(name="search")
 	async def find_group(self, ctx):
 		guildID = ctx.guild.id
-		authorID = ctx.author.id
-		def check(m):
-			return m.author == ctx.author
-		# messages = await ctx.channel.history(limit=1).flatten()
-		# for each_message in messages:
-		# 	await each_message.delete()
-		if not self.db.get_groups_author(guildID, authorID):
-			await ctx.author.send(f"** You have 60 second to answer each Questions! **\n"
-									f"** Enter name of activity: (e.g  `Amrine Excavation`) **")
-			try:
-				name_activity = await self.bot.wait_for('message',check=check, timeout=60.0)
-				name_activity = name_activity.content
-			except asyncio.TimeoutError:
-				await ctx.author.send('Took too long to answer!')
-				await ctx.message.delete()
-			else:
-				await ctx.author.send("** Enter level min for play activity: (e.g  `25`) **")
+		channel_id = self.db.get_channel_id(guildID)
+		if channel_id == ctx.message.channel.id:
+			authorID = ctx.author.id
+			def check(m):
+				return m.author == ctx.author and isinstance(m.channel, discord.channel.DMChannel)
+			if not self.db.get_groups_author(guildID, authorID):
+				await ctx.author.send(f"** You have 60 second to answer each Questions! **\n"
+										f"** Enter name of activity: (e.g  `Amrine Excavation`) **")
 				try:
-					level_activity = await self.bot.wait_for('message',check=check, timeout=60.0)
-					level_activity = int(level_activity.content)
+					name_activity = await self.bot.wait_for('message',check=check, timeout=60.0)
+					name_activity = name_activity.content
 				except asyncio.TimeoutError:
 					await ctx.author.send('Took too long to answer!')
 					await ctx.message.delete()
-				except ValueError:
-					await ctx.author.send('Error: you have not enter a Number!\n**Please Restart**')
-					await ctx.message.delete()
 				else:
-					number_player = 5
-					# await ctx.author.send("** Enter number of players for this activity: (e.g  `5`) **")
-					# try:
-					# 	number_player = await self.bot.wait_for('message',check=check, timeout=60.0)
-					# 	number_player = int(number_player.content)
-					# except asyncio.TimeoutError:
-					# 	await ctx.author.send('Took too long to answer!')
-					if False:
-						return
+					await ctx.author.send("** Enter level min for play activity: (e.g  `25`) **")
+					try:
+						level_activity = await self.bot.wait_for('message',check=check, timeout=60.0)
+						level_activity = int(level_activity.content)
+					except asyncio.TimeoutError:
+						await ctx.author.send('Took too long to answer!')
+						await ctx.message.delete()
+					except ValueError:
+						await ctx.author.send('Error: you have not enter a Number!\n**Please Restart**')
+						await ctx.message.delete()
 					else:
-						await ctx.author.send("** Enter departure for this activity: (e.g  `18h30`) **")
-						try:
-							departure = await self.bot.wait_for('message',check=check, timeout=60.0)
-							departure = departure.content
-							if not re.search("^([0-1]?[0-9]|2[0-3])(h|H)", departure):
-								raise ValueError
-						except asyncio.TimeoutError:
-							await ctx.author.send('Took too long to answer!')
-							await ctx.message.delete()
-						except ValueError:
-							await ctx.author.send('Enter a valide hours (e.g  `18h` `18h30`)\n **Please restart**')
-							await ctx.message.delete()
+						number_player = 5
+						# await ctx.author.send("** Enter number of players for this activity: (e.g  `5`) **")
+						# try:
+						# 	number_player = await self.bot.wait_for('message',check=check, timeout=60.0)
+						# 	number_player = int(number_player.content)
+						# except asyncio.TimeoutError:
+						# 	await ctx.author.send('Took too long to answer!')
+						if False:
+							return
 						else:
-							mess = await ctx.author.send("** Choose your role: (e.g `dps/tank/heal`) **")
+							await ctx.author.send("** Enter departure for this activity: (e.g  `18h30`) **")
 							try:
-								role = await self.bot.wait_for('message',check=check, timeout=60.0)
-								role = role.content
-								if not role.lower() in ['dps', 'tank', 'heal']:
+								departure = await self.bot.wait_for('message',check=check, timeout=60.0)
+								departure = departure.content
+								if not re.search("^([0-1]?[0-9]|2[0-3])(h|H)", departure):
 									raise ValueError
 							except asyncio.TimeoutError:
 								await ctx.author.send('Took too long to answer!')
 								await ctx.message.delete()
 							except ValueError:
-								await ctx.author.send('You need to choice `Tank`, `Dps` or `Heal`\n **Please restart**')
+								await ctx.author.send('Enter a valide hours (e.g  `18h` `18h30`)\n **Please restart**')
 								await ctx.message.delete()
 							else:
-								embed = await self.__create_view_embed(name_activity, level_activity, \
-											departure, role.lower(), ctx.author.id, number_player)
-								channel_id = self.db.get_channel_id(guildID)
-								chanel = self.bot.get_channel(int(channel_id))
-								mess = await chanel.send(embed=embed)
-								for emoji in self.__private_emojis:
-									await mess.add_reaction(emoji)
-								self.db.set_groups_table(guildID, authorID, name_activity, \
-										level_activity, number_player, departure, mess.id)
-								await ctx.author.send("** Your request group is successfully completed **")
-		else:
-			await ctx.author.send(f"** You have a request in instances,\n"
-									f"Use command `!delete` and restart **")
-		await ctx.message.delete()
+								mess = await ctx.author.send("** Choose your role: (e.g `dps/tank/heal`) **")
+								try:
+									role = await self.bot.wait_for('message',check=check, timeout=60.0)
+									role = role.content
+									if not role.lower() in ['dps', 'tank', 'heal']:
+										raise ValueError
+								except asyncio.TimeoutError:
+									await ctx.author.send('Took too long to answer!')
+									await ctx.message.delete()
+								except ValueError:
+									await ctx.author.send('You need to choice `Tank`, `Dps` or `Heal`\n **Please restart**')
+									await ctx.message.delete()
+								else:
+									embed = await self.__create_view_embed(name_activity, level_activity, \
+												departure, role.lower(), ctx.author.id, number_player)
+									channel_id = self.db.get_channel_id(guildID)
+									chanel = self.bot.get_channel(int(channel_id))
+									mess = await chanel.send(embed=embed)
+									for emoji in self.__private_emojis_ut:
+										await mess.add_reaction(emoji)
+									self.db.set_groups_table(guildID, authorID, name_activity, \
+											level_activity, number_player, departure, mess.id)
+									await ctx.author.send("** Your request group is successfully completed **")
+			else:
+				await ctx.author.send(f"** You have a request in instances,\n"
+										f"Use command `!delete` and restart **")
+			await ctx.message.delete()
+		return
 
 
 	@commands.command(name="setup")
@@ -216,41 +218,39 @@ class Search(commands.Cog):
 	async def setup(self, ctx):
 		guildID = ctx.guild.id
 		ownerID = ctx.author.id
-		if ctx.author.id == ctx.guild.owner.id:
-			def check(m):
-				return m.author.id == ctx.author.id
-			await ctx.channel.send("** You have 60 second to answer each Questions! **")
-			await ctx.channel.send("** Enter ID of category for create text channel? **")
+		def check(m):
+			return m.author.id == ctx.author.id
+		await ctx.channel.send("** You have 60 second to answer each Questions! **")
+		await ctx.channel.send("** Enter ID of category for create text channel? **")
+		try:
+			cat_id = await self.bot.wait_for('message', check=check, timeout=60.0)
+			cat_guild = discord.utils.get(ctx.guild.categories, id=int(cat_id.content))
+			if not cat_guild:
+				raise Exception("Guild id not found")
+		except asyncio.TimeoutError:
+			await ctx.channel.send('Took too long to answer!')
+			await ctx.message.delete()
+		except:
+			await ctx.channel.send("Error: You didn't enter the ID properly.\nUse `!setup` again!")
+			await ctx.message.delete()
+		else:
+			await ctx.channel.send("** Enter the name of the text channel: (e.g Find player)**")
 			try:
-				cat_id = await self.bot.wait_for('message', check=check, timeout=60.0)
-				cat_guild = discord.utils.get(ctx.guild.categories, id=int(cat_id.content))
-				if not cat_guild:
-					raise Exception("Guild id not found")
+				channel = await self.bot.wait_for('message', check=check, timeout=60.0)
 			except asyncio.TimeoutError:
 				await ctx.channel.send('Took too long to answer!')
 				await ctx.message.delete()
-			except:
-				await ctx.channel.send("Error: You didn't enter the ID properly.\nUse `!setup` again!")
-				await ctx.message.delete()
 			else:
-				await ctx.channel.send("** Enter the name of the text channel: (e.g Find player)**")
 				try:
-					channel = await self.bot.wait_for('message', check=check, timeout=60.0)
-				except asyncio.TimeoutError:
-					await ctx.channel.send('Took too long to answer!')
+					channel = await cat_guild.create_text_channel(name=channel.content)
+					self.db.set_guild_table(guildID, ownerID, channel.id, cat_id.content)
+				except:
+					await ctx.channel.send("You didn't enter the names properly.\nUse `!setup` again!")
 					await ctx.message.delete()
 				else:
-					try:
-						channel = await cat_guild.create_text_channel(name=channel.content)
-						self.db.set_guild_table(guildID, ownerID, channel.id, cat_id.content)
-					except:
-						await ctx.channel.send("You didn't enter the names properly.\nUse `!setup` again!")
-						await ctx.message.delete()
-					else:
-						await ctx.channel.send(f"** Text Channel `{channel}` successfully created **")
-		else:
-			await ctx.channel.send(f"{ctx.author.mention} only the owner of the server can setup the bot!")
+					await ctx.channel.send(f"** Text Channel `{channel}` successfully created **")
 		await ctx.message.delete()
+		return
 
 
 def setup(bot):
