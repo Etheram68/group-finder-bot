@@ -26,6 +26,12 @@ class DaoFactory:
 			return False
 		return True
 
+	def drop_groups_mes(self, guildID:str, mesId:str):
+		self.cur.execute("SELECT * FROM groups WHERE guildID=? AND mesId=?", (guildID, mesId))
+		res = self.cur.fetchone()
+		if res:
+			self.cur.execute("DELETE FROM groups WHERE mesId=?", (mesId,))
+			self.con.commit()
 
 	def drop_groups_author(self, guildID:str, authorID:str):
 		self.cur.execute("SELECT * FROM groups WHERE guildID=? AND authorID=?", (guildID, authorID))
