@@ -1,13 +1,11 @@
-#!.env/bin/python
+#!/home/frfrey/group-finder-bot/.venv/bin/python3.9 
 import discord
 from discord.ext import commands
 import sys
 import traceback
 import os
 
-intents = discord.Intents.default()
-intents.members = True
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix='!')
 bot.remove_command("help")
 
 initial_extensions = ['src.cogs.search']

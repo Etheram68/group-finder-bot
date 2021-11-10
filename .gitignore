@@ -1,3 +1,4 @@
 finder.db
 .env
 __pycache__/
+.venv
